@@ -384,6 +384,17 @@ describe "Replay", ->
       it "should fail to connnect", ->
         assert @error instanceof Error
 
+    describe "no match due to extra header in request", ->
+      it "should fail to connnect", (done)->
+        request = HTTP.request(hostname: "example.com", port: INACTIVE_PORT, path: "/weather.json")
+        request.setHeader "If-None-Match", "some-etag"
+        request.on "response", (response)->
+          response.on "end", done new Error('Not supposed to get a response')
+        request.on "error", (error)->
+          assert error instanceof Error
+          done()
+        request.end()
+
 
   describe "minimal response", ->
     before ->
