@@ -3,6 +3,7 @@ File           = require("fs")
 Path           = require("path")
 Matcher        = require("./matcher")
 jsStringEscape = require("js-string-escape")
+headerUtils    = require("./header_utils")
 
 exists = File.exists || Path.exists
 existsSync = File.existsSync || Path.existsSync
@@ -84,16 +85,16 @@ class Catalog
       try
         file = File.createWriteStream(tmpfile, encoding: "utf-8")
         file.write "#{request.method.toUpperCase()} #{request.url.path || "/"}\n"
-        writeHeaders file, request.headers, request_headers
+        headerUtils.write file, request.headers, request_headers
         if request.body
           body = ""
           for chunks in request.body
             body += chunks[0]
-          writeHeaders file, body: jsStringEscape(body)
+          headerUtils.write file, body: jsStringEscape(body)
         file.write "\n"
         # Response part
         file.write "#{response.status || 200} HTTP/#{response.version || "1.1"}\n"
-        writeHeaders file, response.headers
+        headerUtils.write file, response.headers
         file.write "\n"
         for part in response.body
           file.write part
@@ -114,7 +115,7 @@ class Catalog
       else
         [method, path] = method_and_path.split(/\s/)
       assert method && (path || regexp), "#{filename}: first line must be <method> <path>"
-      headers = parseHeaders(filename, header_lines, request_headers)
+      headers = headerUtils.parse(filename, header_lines, request_headers)
       body = headers["body"]
       delete headers["body"]
       return { url: path || regexp, method: method, headers: headers, body: body }
@@ -125,7 +126,7 @@ class Catalog
         [status_line, header_lines...] = response.split(/\n/)
         status = parseInt(status_line.split()[0], 10)
         version = status_line.match(/\d.\d$/)
-        headers = parseHeaders(filename, header_lines)
+        headers = headerUtils.parse(filename, header_lines)
       return { status: status, version: version, headers: headers, body: body }
 
     [request, response, body] = readAndInitialParseFile(filename)
@@ -137,50 +138,5 @@ readAndInitialParseFile = (filename)->
   if parts.length > 2
     body = buffer.slice(parts[0].length + parts[1].length + 4)
   return [parts[0], parts[1], body || '']
-
-# Parse headers from header_lines.  Optional argument `only` is an array of
-# regular expressions; only headers matching one of these expressions are
-# parsed.  Returns a object with name/value pairs.
-parseHeaders = (filename, header_lines, only = null)->
-  headers = Object.create(null)
-  for line in header_lines
-    continue if line == ""
-    [_, name, value] = line.match(/^(.*?)\:\s+(.*)$/)
-    continue if only && !match(name, only)
-
-    key = (name || "").toLowerCase()
-    value = (value || "").trim().replace(/^"(.*)"$/, "$1")
-    if Array.isArray(headers[key])
-      headers[key].push value
-    else if headers[key]
-      headers[key] = [headers[key], value]
-    else
-      headers[key] = value
-  return headers
-
-
-# Write headers to the File object.  Optional argument `only` is an array of
-# regular expressions; only headers matching one of these expressions are
-# written.
-writeHeaders = (file, headers, only = null)->
-  for name, value of pruneHeaders(headers, only)
-    if Array.isArray(value)
-      for item in value
-        file.write "#{name}: #{item}\n"
-    else
-      file.write "#{name}: #{value}\n"
-
-pruneHeaders = (headers, only = null)->
-  prunedHeaders = {}
-  prunedHeaders[name] = value for name, value of headers when !only or match(name, only)
-  prunedHeaders
-
-# Returns true if header name matches one of the regular expressions.
-match = (name, regexps)->
-  for regexp in regexps
-    if regexp.test(name)
-      return true
-  return false
-
 
 module.exports = Catalog
