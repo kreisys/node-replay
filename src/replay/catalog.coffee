@@ -163,14 +163,17 @@ parseHeaders = (filename, header_lines, only = null)->
 # regular expressions; only headers matching one of these expressions are
 # written.
 writeHeaders = (file, headers, only = null)->
-  for name, value of headers
-    continue if only && !match(name, only)
+  for name, value of pruneHeaders(headers, only)
     if Array.isArray(value)
       for item in value
         file.write "#{name}: #{item}\n"
     else
       file.write "#{name}: #{value}\n"
 
+pruneHeaders = (headers, only = null)->
+  prunedHeaders = {}
+  prunedHeaders[name] = value for name, value of headers when !only or match(name, only)
+  prunedHeaders
 
 # Returns true if header name matches one of the regular expressions.
 match = (name, regexps)->
