@@ -1,12 +1,9 @@
 passThrough = require("./pass_through")
-headerUtils = require("./header_utils")
 
 recorded = (settings)->
   catalog = settings.catalog
   capture = passThrough(true)
   return (request, callback)->
-    request.headers = headerUtils.prune(request.headers, settings.headers)
-
     host = request.url.hostname
     if request.url.port && request.url.port != "80"
       host += ":#{request.url.port}"

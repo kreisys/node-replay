@@ -19,12 +19,13 @@
 assert         = require("assert")
 URL            = require("url")
 jsStringEscape = require("js-string-escape")
+headerUtils    = require("./header_utils")
 
 # Simple implementation of a matcher.
 #
 # To create a matcher from request/response mapping use `fromMapping`.
 class Matcher
-  constructor: (request, response)->
+  constructor: (request, response, @settings)->
     # Map requests to object properties.  We do this for quick matching.
     assert request.url || request.regexp, "I need at least a URL to match request to response"
     if request.regexp
@@ -70,6 +71,8 @@ class Matcher
   # Quick and effective matching. 
   match: (request)->
     { url, method, headers, body } = request
+    headers = headerUtils.prune(headers, @settings.headers)
+
     return false if @hostname && @hostname != url.hostname
     if @regexp
       return false unless @regexp.test(url.path)
@@ -94,7 +97,7 @@ class Matcher
   #
   # Mapping can contain `request` and `response` object.  As shortcut, mapping can specify `path` and `method` (optional)
   # directly, and also any of the response properties.
-  @fromMapping: (host, mapping)->
+  @fromMapping: (host, mapping, settings)->
     assert !!mapping.path ^ !!mapping.request, "Mapping must specify path or request object"
     if mapping.path
       request =
@@ -114,7 +117,7 @@ class Matcher
           method:   mapping.request.method
           headers:  mapping.request.headers
           body:     mapping.request.body
-    matcher = new Matcher(request, mapping.response || mapping)
+    matcher = new Matcher(request, mapping.response || mapping, settings)
     return (request)->
       if matcher.match(request)
         return matcher.response

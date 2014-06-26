@@ -59,16 +59,16 @@ class Catalog
       for file in files
         matchers = @matchers[host] ||= []
         mapping = @_read("#{pathname}/#{file}")
-        matchers.push Matcher.fromMapping(host, mapping)
+        matchers.push Matcher.fromMapping(host, mapping, @settings)
     else
       matchers = @matchers[host] ||= []
       mapping = @_read(pathname)
-      matchers.push Matcher.fromMapping(host, mapping)
+      matchers.push Matcher.fromMapping(host, mapping, @settings)
 
     return matchers
 
   save: (host, request, response, callback)->
-    matcher = Matcher.fromMapping(host, request: request, response: response)
+    matcher = Matcher.fromMapping(host, request: request, response: response, @settings)
     matchers = @matchers[host] ||= []
     matchers.push matcher
     request_headers = @settings.headers
