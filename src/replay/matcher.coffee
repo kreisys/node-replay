@@ -78,6 +78,7 @@ class Matcher
       return false if @path && @path != url.path
       return false if @query && @query != url.query
     return false unless @method == method
+    return false unless Object.keys(@headers).length == Object.keys(headers).length
     for name, value of @headers
       return false if value != headers[name]
     if body
