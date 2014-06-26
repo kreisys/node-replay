@@ -287,6 +287,8 @@ describe "Replay", ->
       for file in File.readdirSync(@fixturesDir)
         File.unlinkSync("#{@fixturesDir}/#{file}")
       File.rmdir(@fixturesDir)
+      # Put back the /accept/ header
+      Replay.headers.push /^accept/
 
 
   # Send responses to non-existent server on inactive port. No matching fixture for that path, expect a 404.
